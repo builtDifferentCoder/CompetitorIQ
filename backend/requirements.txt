@@ -1,6 +1,6 @@
 # Core Multi-Agent Orchestration
 langgraph>=0.2.70,<0.3.0
-langgraph-checkpoint-sqlite>=3.1.0,<4.0.0
+langgraph-checkpoint-sqlite>=2.0.0,<2.1.0
 langchain>=0.3.0,<0.4.0
 langchain-core>=0.3.0,<0.4.0
 langchain-anthropic>=0.2.0,<0.3.0
