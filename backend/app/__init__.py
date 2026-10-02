@@ -1,0 +1,1 @@
+"""CompetitorIQ backend package."""
