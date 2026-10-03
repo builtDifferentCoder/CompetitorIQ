@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CompetitorIQ — Autonomous Multi-Agent Research Engine</title>
+<meta name="description" content="A LangGraph multi-agent intelligence pipeline that conducts parallel research, pauses for human approval twice, and generates grounded, cited intelligence reports.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --background: #090d16;
+    --surface: #111726;
+    --surface-subtle: #161e31;
+    --surface-elevated: #1c253d;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.16);
+    --border-amber: rgba(245, 158, 11, 0.35);
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --amber: #f59e0b;
+    --amber-light: #fbbf24;
+    --amber-hover: #d97706;
+    --amber-glow: rgba(245, 158, 11, 0.18);
+    --emerald: #10b981;
+    --emerald-glow: rgba(16, 185, 129, 0.2);
+    --teal: #38bdf8;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-full: 9999px;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background-color: var(--background);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Ambient radial background glow */
+  body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 1000px;
+    height: 480px;
+    background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(245, 158, 11, 0.12), transparent 75%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
+
+  h1, h2, h3 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; line-height: 1.2; margin: 0; color: var(--text-primary); }
+  a { color: var(--amber); text-decoration: none; transition: all 0.2s ease; }
+  a:hover { color: var(--amber-light); }
+
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+  .wide { max-width: 940px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* Navigation Bar */
+  nav.navbar {
+    width: 100%;
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(17, 23, 38, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .nav-inner {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 0 24px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .brand-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--amber);
+    box-shadow: inset 0 0 8px rgba(245, 158, 11, 0.15);
+  }
+  .brand-title {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+  }
+  .brand-title span { color: var(--amber); }
+  .version-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-subtle);
+    margin-left: 6px;
+  }
+  .nav-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 5px 12px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border-subtle);
+  }
+  .pulse-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: var(--emerald);
+    box-shadow: 0 0 8px var(--emerald);
+    animation: pulseGlow 2s infinite ease-in-out;
+  }
+  @keyframes pulseGlow {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+
+  /* Hero Section */
+  header.hero {
+    padding: 90px 0 65px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .hero h1 {
+    font-size: clamp(2.4rem, 5.5vw, 3.6rem);
+    letter-spacing: -0.03em;
+    color: #ffffff;
+    max-width: 14ch;
+  }
+  .hero h1 span { color: var(--amber); }
+  .hero p.lede {
+    font-size: 1.22rem;
+    color: var(--text-secondary);
+    max-width: 50ch;
+    margin: 22px 0 34px;
+    font-style: italic;
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+  .cta-row {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 30px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: var(--radius-full);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn-primary {
+    background: var(--amber);
+    color: #100b00;
+    box-shadow: 0 4px 16px var(--amber-glow);
+  }
+  .btn-primary:hover {
+    background: var(--amber-light);
+    color: #0d0800;
+    box-shadow: 0 6px 22px rgba(245, 158, 11, 0.3);
+  }
+  .btn-ghost {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+  }
+  .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--border-strong);
+    color: #ffffff;
+  }
+  .contact-line {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+  }
+  .contact-line a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-decoration-color: var(--border-subtle);
+    text-underline-offset: 3px;
+  }
+  .contact-line a:hover {
+    color: var(--amber);
+    text-decoration-color: var(--amber);
+  }
+
+  /* Section Standard */
+  section {
+    padding: 68px 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  section:last-of-type { border-bottom: none; }
+  section h2 {
+    font-size: 1.85rem;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+    color: #ffffff;
+  }
+  section p.section-intro {
+    color: var(--text-secondary);
+    margin: 0 0 28px;
+    font-size: 1.02rem;
+    line-height: 1.68;
+  }
+
+  /* Stages List */
+  .stages {
+    list-style: none;
+    margin: 32px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 14px;
+  }
+  .stages li {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 16px;
+    padding: 18px 20px;
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    transition: border-color 0.2s ease, background 0.2s ease;
+  }
+  .stages li:hover {
+    border-color: var(--border-strong);
+    background: var(--surface-subtle);
+  }
+  .stages .n {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--amber);
+    padding-top: 2px;
+  }
+  .stages strong {
+    color: var(--text-primary);
+    display: block;
+    margin-bottom: 4px;
+    font-size: 1.02rem;
+    font-weight: 600;
+  }
+  .stages span {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+
+  /* Architecture Diagram Frame */
+  .diagram-container {
+    margin: 40px 0 8px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+  }
+  .diagram-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid var(--border-subtle);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.76rem;
+    color: var(--text-muted);
+  }
+  .diagram-header-dots {
+    display: flex;
+    gap: 6px;
+  }
+  .diagram-header-dots span {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.14);
+  }
+  .diagram {
+    padding: 24px 20px 20px;
+    overflow-x: auto;
+  }
+  .diagram svg {
+    display: block;
+    min-width: 720px;
+    width: 100%;
+    height: auto;
+  }
+
+  /* Decisions / Findings Cards */
+  .findings {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+    margin-top: 28px;
+  }
+  .finding {
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .finding:hover {
+    transform: translateY(-3px);
+    border-color: rgba(245, 158, 11, 0.35);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  }
+  .finding .tag {
+    align-self: flex-start;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.74rem;
+    font-weight: 500;
+    color: var(--teal);
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    border-radius: var(--radius-full);
+    padding: 3px 10px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .finding h3 {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.12rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 10px;
+    color: #ffffff;
+  }
+  .finding p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  /* Tech Stack Pills */
+  .stack-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-full);
+    padding: 8px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    background: var(--surface);
+    transition: all 0.2s ease;
+  }
+  .pill:hover {
+    border-color: var(--border-strong);
+    color: #ffffff;
+    background: var(--surface-subtle);
+  }
+  .pill-accent {
+    border-color: rgba(245, 158, 11, 0.25);
+    color: var(--amber);
+    background: rgba(245, 158, 11, 0.06);
+  }
+
+  /* Footer */
+  footer {
+    padding: 70px 0 95px;
+    background: linear-gradient(180deg, transparent 0%, rgba(17, 23, 38, 0.6) 100%);
+  }
+  footer h2 {
+    font-size: 1.7rem;
+    margin-bottom: 12px;
+    color: #ffffff;
+  }
+  footer p {
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+    font-size: 1.02rem;
+  }
+
+  @media (max-width: 640px) {
+    header.hero { padding: 60px 0 40px; }
+    section { padding: 48px 0; }
+    .findings { grid-template-columns: 1fr; }
+    .cta-row { flex-direction: column; align-items: stretch; }
+    .btn { justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Navigation Bar -->
+<nav class="navbar">
+  <div class="nav-inner">
+    <div class="brand">
+      <div class="brand-logo" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+          <path d="M5 3v4"/>
+          <path d="M19 17v4"/>
+          <path d="M3 5h4"/>
+          <path d="M17 19h4"/>
+        </svg>
+      </div>
+      <div class="brand-title">Competitor<span>IQ</span><span class="version-tag">v1.0</span></div>
+    </div>
+    <div class="nav-status">
+      <span class="pulse-dot"></span>
+      <span>Autonomous Pipeline Active</span>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero Section -->
+<header class="hero">
+  <div class="wrap">
+    <h1>Competitor<span>IQ</span></h1>
+    <p class="lede">Four agents research a company in parallel, a person approves the plan and the draft, and a cited report comes out the other end.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://competitor-iq-delta.vercel.app/" target="_blank" rel="noopener">
+        <span>Open the live app</span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg>
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/builtDifferentCoder/CompetitorIQ" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        <span>View source on GitHub</span>
+      </a>
+    </div>
+    <p class="contact-line">Built by a full-stack developer moving into AI engineering. Questions, feedback, or roles — <a href="mailto:ch.hamzagorya.794@gmail.com">ch.hamzagorya.794@gmail.com</a></p>
+  </div>
+</header>
+
+<!-- What It Does Section -->
+<section>
+  <div class="wrap">
+    <h2>What it does</h2>
+    <p class="section-intro">Give it a company name. A planner agent breaks the research into four angles — pricing, features, customer sentiment, and recent news. A person reviews that plan before anything runs, can remove a task, then approves it. Four researcher agents go out in parallel, each grounded in real web search, and a writer agent synthesizes their findings into a report where every claim is numbered and traceable to a source. Before the report is final, the person reviews the draft too — approve it, or send it back with a note for revision, as many times as needed.</p>
+    
+    <ul class="stages">
+      <li>
+        <span class="n">01</span>
+        <div>
+          <strong>Plan</strong>
+          <span>The planner agent reads the company name and proposes four structured research tasks across strategic domains.</span>
+        </div>
+      </li>
+      <li>
+        <span class="n">02</span>
+        <div>
+          <strong>Checkpoint 1 — Approve the plan</strong>
+          <span>Execution halts cleanly via LangGraph interrupt(). A human reviewer can drop tasks or refine the scope before real search API spend occurs.</span>
+        </div>
+      </li>
+      <li>
+        <span class="n">03</span>
+        <div>
+          <strong>Research, in parallel</strong>
+          <span>Four worker agents execute concurrently via dynamic fan-out, extracting verified findings with deterministic corroboration confidence scores.</span>
+        </div>
+      </li>
+      <li>
+        <span class="n">04</span>
+        <div>
+          <strong>Write & Ground</strong>
+          <span>A writer agent synthesizes all parallel findings into an intelligence report with numbered source citations and a verifiable references section.</span>
+        </div>
+      </li>
+      <li>
+        <span class="n">05</span>
+        <div>
+          <strong>Checkpoint 2 — Approve the draft</strong>
+          <span>Execution pauses once more. The human can approve the final report or request iterative revisions with custom notes before sign-off.</span>
+        </div>
+      </li>
+    </ul>
+
+    <!-- Architecture Diagram -->
+    <div class="diagram-container">
+      <div class="diagram-header">
+        <div class="diagram-header-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <div>LangGraph StateGraph Architecture</div>
+      </div>
+      <div class="diagram" role="img" aria-label="Flow diagram: Planner leads to a human checkpoint, which fans out to four parallel researcher agents, which merge into a Writer, which leads to a second human checkpoint that either finalizes the report or loops back to the Writer for revision.">
+        <svg viewBox="0 0 860 300" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 z" fill="#64748b"/>
+            </marker>
+            <marker id="arrow-amber" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 z" fill="#f59e0b"/>
+            </marker>
+          </defs>
+          <g font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="#f8fafc">
+            <!-- Planner Node -->
+            <rect x="15" y="130" width="95" height="42" rx="8" fill="#161e31" stroke="rgba(255,255,255,0.12)" stroke-width="1.2"/>
+            <text x="62" y="156" text-anchor="middle" font-weight="600">Planner</text>
+
+            <!-- Human Checkpoint 1 -->
+            <polygon points="150,110 210,150 150,190 90,150" fill="#111726" stroke="#f59e0b" stroke-width="1.5" transform="translate(45,0)"/>
+            <text x="240" y="146" text-anchor="middle" fill="#fbbf24" font-weight="600">Human</text>
+            <text x="240" y="161" text-anchor="middle" fill="#94a3b8" font-size="11">approves</text>
+
+            <!-- Parallel Researchers -->
+            <g stroke="rgba(255,255,255,0.1)" fill="#161e31">
+              <rect x="345" y="20" width="115" height="38" rx="8"/>
+              <rect x="345" y="78" width="115" height="38" rx="8"/>
+              <rect x="345" y="186" width="115" height="38" rx="8"/>
+              <rect x="345" y="244" width="115" height="38" rx="8"/>
+            </g>
+            <g text-anchor="middle" fill="#f8fafc" font-size="12">
+              <text x="402" y="44">Pricing Agent</text>
+              <text x="402" y="102">Feature Agent</text>
+              <text x="402" y="210">Sentiment Agent</text>
+              <text x="402" y="268">News Agent</text>
+            </g>
+
+            <!-- Writer Node -->
+            <rect x="525" y="130" width="95" height="42" rx="8" fill="#161e31" stroke="rgba(255,255,255,0.12)" stroke-width="1.2"/>
+            <text x="572" y="156" text-anchor="middle" font-weight="600">Writer</text>
+
+            <!-- Human Checkpoint 2 -->
+            <polygon points="150,110 210,150 150,190 90,150" fill="#111726" stroke="#f59e0b" stroke-width="1.5" transform="translate(510,0)"/>
+            <text x="705" y="146" text-anchor="middle" fill="#fbbf24" font-weight="600">Human</text>
+            <text x="705" y="161" text-anchor="middle" fill="#94a3b8" font-size="11">reviews</text>
+
+            <!-- Final Report Node -->
+            <rect x="765" y="130" width="85" height="42" rx="8" fill="rgba(16, 185, 129, 0.15)" stroke="#10b981" stroke-width="1.3"/>
+            <text x="807" y="156" text-anchor="middle" fill="#34d399" font-weight="600">Report</text>
+          </g>
+
+          <!-- Connecting Arrows -->
+          <g stroke="#64748b" stroke-width="1.4" fill="none" marker-end="url(#arrow)">
+            <path d="M110,151 L154,151"/>
+            <path d="M280,151 L345,39"/>
+            <path d="M280,151 L345,97"/>
+            <path d="M280,151 L345,205"/>
+            <path d="M280,151 L345,263"/>
+            <path d="M460,39 L525,143"/>
+            <path d="M460,97 L525,147"/>
+            <path d="M460,205 L525,155"/>
+            <path d="M460,263 L525,159"/>
+            <path d="M620,151 L660,151"/>
+            <path d="M740,151 L765,151"/>
+          </g>
+          
+          <!-- Revision Loopback Edge -->
+          <path d="M705,192 Q 645,242 580,174" stroke="#f59e0b" stroke-width="1.4" fill="none" marker-end="url(#arrow-amber)" stroke-dasharray="4,4"/>
+          <text x="648" y="248" font-family="'JetBrains Mono', monospace" font-size="11" fill="#f59e0b" text-anchor="middle">request_changes</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Decisions Worth Explaining Section -->
+<section>
+  <div class="wide">
+    <h2>Decisions worth explaining</h2>
+    <p class="section-intro">The interesting part of a multi-agent system is rarely the happy path. These are the places where the first version broke, and what that led to.</p>
+    
+    <div class="findings">
+      <div class="finding">
+        <span class="tag">state</span>
+        <h3>Four agents writing to one list, safely</h3>
+        <p>Four researchers finish in whatever order the web answers them, and all four need to land in the same state without overwriting each other. The findings field uses an operator.add reducer so concurrent writes merge instead of racing. Verified by running the fan-out three times in a row and asserting the result count matches every time — a race condition can pass once and fail the next run, so one green run proves nothing.</p>
+      </div>
+      <div class="finding">
+        <span class="tag">checkpointing</span>
+        <h3>The interrupt that didn't survive a restart</h3>
+        <p>Pausing for human approval relies on LangGraph persisting state at the pause point, then rehydrating it later — not a thread sitting in memory. The first checkpointer (in-process memory) looked like it worked, until a test that killed the process between pause and resume showed the state was gone. Switched to a disk-backed SQLite checkpointer in WAL mode before that reached production, not after.</p>
+      </div>
+      <div class="finding">
+        <span class="tag">trust</span>
+        <h3>A confidence score that meant nothing</h3>
+        <p>Early researcher output included a confidence number the model generated alongside its findings — a plausible-looking float with no real signal behind it. Replaced with a deterministic score computed from how many corroborating sources were actually found, capped below full certainty on principle: an automated search pipeline with no human verification shouldn't claim near-certainty.</p>
+      </div>
+      <div class="finding">
+        <span class="tag">grounding</span>
+        <h3>Every claim traces to a source</h3>
+        <p>The writer agent is prohibited from stating anything that isn't backed by a specific finding — if the research doesn't support a claim, the claim is left out rather than filled in from the model's own training knowledge. The final report carries numbered citations and a references list, so any claim can be checked against where it came from.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Built With Section -->
+<section>
+  <div class="wrap">
+    <h2>Built with</h2>
+    <p class="section-intro">Orchestration, a real search tool, a streaming API, and a frontend that shows the agents working rather than a spinner followed by a wall of text.</p>
+    
+    <div class="stack-grid">
+      <span class="pill pill-accent">LangGraph StateGraph</span>
+      <span class="pill">Claude 3.5 Sonnet</span>
+      <span class="pill">Tavily Search API</span>
+      <span class="pill">FastAPI + SSE Streaming</span>
+      <span class="pill">SQLite Checkpointer (WAL)</span>
+      <span class="pill">Next.js 15 (App Router)</span>
+      <span class="pill">Tailwind CSS</span>
+      <span class="pill">Render + Vercel Deployment</span>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="wrap">
+    <h2>Try it on a real company</h2>
+    <p>The live app runs the full pipeline, including both approval checkpoints — expect the first request to take a few seconds if the backend container is spinning up from cold sleep.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://competitor-iq-delta.vercel.app/" target="_blank" rel="noopener">
+        <span>competitor-iq-delta.vercel.app</span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg>
+      </a>
+    </div>
+    <p class="contact-line" style="margin-top: 32px;">Get in touch — <a href="mailto:ch.hamzagorya.794@gmail.com">ch.hamzagorya.794@gmail.com</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
